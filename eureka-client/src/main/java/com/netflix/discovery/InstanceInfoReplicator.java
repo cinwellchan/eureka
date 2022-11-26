@@ -65,9 +65,13 @@ class InstanceInfoReplicator implements Runnable {
     }
 
     public void start(int initialDelayMs) {
+        // 启动时 started 设置为 true
         if (started.compareAndSet(false, true)) {
+            // 设置为 dirty，便于下一次心跳时同步到 eureka server
             instanceInfo.setIsDirty();  // for initial register
+            // 延迟40秒后开始调度当前任务
             Future next = scheduler.schedule(this, initialDelayMs, TimeUnit.SECONDS);
+            // 将 Future 放到本地变量中
             scheduledPeriodicRef.set(next);
         }
     }

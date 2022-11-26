@@ -1345,6 +1345,7 @@ public class DiscoveryClient implements EurekaClient {
      * Initializes all scheduled tasks.
      */
     private void initScheduledTasks() {
+        // 省略定时刷新注册表的任务...
         if (clientConfig.shouldFetchRegistry()) {
             // registry cache refresh timer
             // 抓取注册表的间隔时间，默认30秒
