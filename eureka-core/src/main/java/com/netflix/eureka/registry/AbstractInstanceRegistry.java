@@ -117,11 +117,14 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
         this.serverConfig = serverConfig;
         this.clientConfig = clientConfig;
         this.serverCodecs = serverCodecs;
+
+        // 最近下线的循环队列
         this.recentCanceledQueue = new CircularQueue<Pair<Long, String>>(1000);
+        // 最近注册的循环队列
         this.recentRegisteredQueue = new CircularQueue<Pair<Long, String>>(1000);
-
+        // 最近一分钟续约的计数器
         this.renewsLastMin = new MeasuredRate(1000 * 60 * 1);
-
+        // 一个定时调度任务，定时剔除最近改变队列中过期的实例
         this.deltaRetentionTimer.schedule(getDeltaRetentionTask(),
                 serverConfig.getDeltaRetentionTimerIntervalInMs(),
                 serverConfig.getDeltaRetentionTimerIntervalInMs());
@@ -1275,7 +1278,8 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
 
     }
 
-    /* visible for testing */ static class CircularQueue<E> extends AbstractQueue<E> {
+    /* visible for testing */
+    static class CircularQueue<E> extends AbstractQueue<E> {
 
         private final ArrayBlockingQueue<E> delegate;
         private final int capacity;

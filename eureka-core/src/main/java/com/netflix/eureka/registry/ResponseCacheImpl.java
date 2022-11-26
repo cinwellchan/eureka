@@ -123,17 +123,25 @@ public class ResponseCacheImpl implements ResponseCache {
     ResponseCacheImpl(EurekaServerConfig serverConfig, ServerCodecs serverCodecs, AbstractInstanceRegistry registry) {
         this.serverConfig = serverConfig;
         this.serverCodecs = serverCodecs;
+        // 是否使用只读缓存，默认为 true
         this.shouldUseReadOnlyResponseCache = serverConfig.shouldUseReadOnlyResponseCache();
+        // 保存注册表
         this.registry = registry;
-
+        // 缓存更新间隔时间，默认30秒
         long responseCacheUpdateIntervalMs = serverConfig.getResponseCacheUpdateIntervalMs();
+        // 使用 google guava cache 构造一个读写缓存
         this.readWriteCacheMap =
+                // 初始容量为1000
                 CacheBuilder.newBuilder().initialCapacity(serverConfig.getInitialCapacityOfResponseCache())
+                        // 缓存的数据在写入多久后过期，默认180秒，也就是说 readWriteCacheMap 会定时过期
                         .expireAfterWrite(serverConfig.getResponseCacheAutoExpirationInSeconds(), TimeUnit.SECONDS)
+                        // 移除元素...
+                        // 当key对应的元素不存在时，使用定义 CacheLoader 加载元素
                         .removalListener(new RemovalListener<Key, Value>() {
                             @Override
                             public void onRemoval(RemovalNotification<Key, Value> notification) {
                                 Key removedKey = notification.getKey();
+                                // 获取元素
                                 if (removedKey.hasRegions()) {
                                     Key cloneWithNoRegions = removedKey.cloneWithoutRegions();
                                     regionSpecificKeys.remove(cloneWithNoRegions, removedKey);
@@ -153,6 +161,8 @@ public class ResponseCacheImpl implements ResponseCache {
                         });
 
         if (shouldUseReadOnlyResponseCache) {
+            // 如果配置了使用只读缓存，就开启一个定时任务，定期将 readWriteCacheMap 的数据同步到 readOnlyCacheMap 中
+            // 默认间隔时间是 30 秒
             timer.schedule(getCacheUpdateTask(),
                     new Date(((System.currentTimeMillis() / responseCacheUpdateIntervalMs) * responseCacheUpdateIntervalMs)
                             + responseCacheUpdateIntervalMs),

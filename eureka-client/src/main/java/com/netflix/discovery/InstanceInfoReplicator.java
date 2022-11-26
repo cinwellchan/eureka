@@ -22,7 +22,11 @@ import java.util.concurrent.atomic.AtomicReference;
  * - a new update task is always scheduled automatically after an earlier update task. However if an on-demand task
  *   is started, the scheduled automatic update task is discarded (and a new one will be scheduled after the new
  *   on-demand update).
- *
+ * <p>
+ *     创建了一个单线程的调度器
+ *     设置 started 为 false
+ *     创建了以分钟为单位的限流器，每分钟默认最多只能调度4次
+ * </p>
  *   @author dliu
  */
 class InstanceInfoReplicator implements Runnable {
@@ -112,6 +116,12 @@ class InstanceInfoReplicator implements Runnable {
         }
     }
 
+    /**
+     * 将 started 设置为 true，代表已经启动了
+     * 调用 instanceInfo.setIsDirty() 方法，将实例设置为 dirty=true，并更新了最后一次设置 dirty 的时间戳
+     * InstanceInfoReplicator 实现了 Runnable，它本身被当成任务来调度，然后延迟40秒开始调度当前任务，并将 Future 放到本地变量中
+
+     */
     public void run() {
         try {
             discoveryClient.refreshInstanceInfo();

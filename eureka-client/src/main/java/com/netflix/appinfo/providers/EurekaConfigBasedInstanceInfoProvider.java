@@ -17,12 +17,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+
  * InstanceInfo provider that constructs the InstanceInfo this this instance using
  * EurekaInstanceConfig.
  *
  * This provider is @Singleton scope as it provides the InstanceInfo for both DiscoveryClient
  * and ApplicationInfoManager, and need to provide the same InstanceInfo to both.
  *
+ * <p>
+ *      * 基于建造者模式构造服务实例
+ *  * 看 new EurekaConfigBasedInstanceInfoProvider(instanceConfig).get() 这段代码，在 get 方法中完成了服务实例信息的构造。
+ *  * 它这里主要用到了建造者设计模式来构建 LeaseInfo 和 InstanceInfo，以 InstanceInfo 为例，它的内部有一个静态的 Builder 类，通过 newBuilder() 方法创建了 InstanceInfo 对象，
+ *  * 然后可以调用 Builder 的属性设置方法来设置属性，在设置这些属性的时候，会做一些关联性的校验，在设置完成后，就调用 build() 方法返回对象，
+ *  * 也可以在 build 方法中再做一些最终的校验。建造者模式就很适合用于构建这种复杂的对象。
+ * </p>
+
+
  * @author elandau
  *
  */
@@ -37,6 +47,7 @@ public class EurekaConfigBasedInstanceInfoProvider implements Provider<InstanceI
     @Inject(optional = true)
     private VipAddressResolver vipAddressResolver = null;
 
+
     @Inject
     public EurekaConfigBasedInstanceInfoProvider(EurekaInstanceConfig config) {
         this.config = config;
@@ -46,6 +57,7 @@ public class EurekaConfigBasedInstanceInfoProvider implements Provider<InstanceI
     public synchronized InstanceInfo get() {
         if (instanceInfo == null) {
             // Build the lease information to be passed to the server based on config
+            // 续约信息：主要有续约间隔时间（默认30秒）和续约过期时间（默认90秒）
             LeaseInfo.Builder leaseInfoBuilder = LeaseInfo.Builder.newBuilder()
                     .setRenewalIntervalInSecs(config.getLeaseRenewalIntervalInSeconds())
                     .setDurationInSecs(config.getLeaseExpirationDurationInSeconds());
@@ -55,6 +67,7 @@ public class EurekaConfigBasedInstanceInfoProvider implements Provider<InstanceI
             }
 
             // Builder the instance information to be registered with eureka server
+            // 基于建造者模式来创建 InstanceInfo
             InstanceInfo.Builder builder = InstanceInfo.Builder.newBuilder(vipAddressResolver);
 
             // set the appropriate id for the InstanceInfo, falling back to datacenter Id if applicable, else hostname
@@ -81,6 +94,7 @@ public class EurekaConfigBasedInstanceInfoProvider implements Provider<InstanceI
                 defaultAddress = config.getIpAddress();
             }
 
+            // 设置属性
             builder.setNamespace(config.getNamespace())
                     .setInstanceId(instanceId)
                     .setAppName(config.getAppname())
@@ -121,7 +135,7 @@ public class EurekaConfigBasedInstanceInfoProvider implements Provider<InstanceI
                     builder.add(key, value);
                 }
             }
-
+            // 调用 build 方法做属性校验并创建 InstanceInfo 实例
             instanceInfo = builder.build();
             instanceInfo.setLeaseInfo(leaseInfoBuilder.build());
         }
